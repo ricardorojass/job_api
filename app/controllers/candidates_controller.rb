@@ -9,6 +9,6 @@ class CandidatesController < ApplicationController
   protected
 
   def candidate_params
-    params.require(:candidate).permit(:name, :skills)
+    params.require(:candidate).permit(:name, skills: [])
   end
 end
