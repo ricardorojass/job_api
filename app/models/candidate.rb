@@ -1,4 +1,3 @@
 class Candidate < ApplicationRecord
-  has_many :skills, dependent: :destroy
-  accepts_nested_attributes_for :skills
+  has_and_belongs_to_many :skills, join_table: :candidates_skills
 end

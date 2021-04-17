@@ -1,3 +1,3 @@
 class Skill < ApplicationRecord
-  belongs_to :candidate, dependent: :destroy
+  has_and_belongs_to_many :candidates
 end
