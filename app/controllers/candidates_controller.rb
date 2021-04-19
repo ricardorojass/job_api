@@ -1,41 +1,68 @@
 class CandidatesController < ApplicationController
+  require 'ostruct'
 
   def create
-    candidate = Candidate.new(candidate_params)
+    # name = params.fetch[:name]
+    # skills = params.fetch[:skills]
 
-    if candidate.save
-      create_skills(candidate)
-    end
+    candidates = [
+      { name: 'Richi', skills: ['js', 'ruby', 'nodejs'] },
+      { name: 'Mochi', skills: ['js', 'python', 'express'] },
+      { name: 'Luis', skills: ['js', 'java', 'mongodb'] }
+    ]
+
+    # candidates = Rails.cache.instance_variable_get(:@data)
+    
+    puts "Candidates => #{candidates}"
+
+    id = params[:id]
+    name = params[:name]
+    skills = params[:skills]
+
+    
+    candidate = { id: id,  name: name, skills: skills }
+    candidates << candidate
+    Rails.cache.write('candidates', candidates)
   end
 
   def search
+    candidates = Rails.cache.read('candidates')
     if params[:skills].blank?
       bad_request
     else
       skills_required = params[:skills].split(',')
+      puts skills_required
 
-      candidates = Candidate.search(skills_required)        
-      if candidates.empty?
-        record_not_found
-      else
-        candidate = candidates.first
-        skills = candidate.skills.map { |s| s.name }
+      candidates = filter(candidates, skills_required)
+      puts candidates
 
-        render json: { data: {
-          id: candidate.id,
-          name: candidate.name,
+      # todo: fix the resulted skills
+      candidate = candidates.first
+      if (candidate[:skills].length > 0)
+        skills = candidate[:skills]
+        
+        render json: {
+          id: candidate[:id],
+          name: candidate[:name],
           skills: skills
-        }, status: 200 }
+        }
+      else
+        record_not_found
       end
     end
   end
 
   private
 
-  def create_skills(candidate)
-    skill_params.each do |skill|
-      candidate.skills << Skill.find_or_create_by(name: skill)
+  def filter(candidates, skills)
+    # filter by skills included in the search
+    candidates = candidates.map do |c|
+      c[:skills] = c[:skills].filter { |s| skills.include?(s) }
+      c
     end
+    
+    # sort candidates desc
+    candidates = candidates.sort { |a,b| b[:skills].length <=> a[:skills].length }
   end
 
   protected
