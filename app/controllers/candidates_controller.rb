@@ -2,52 +2,37 @@ class CandidatesController < ApplicationController
   require 'ostruct'
 
   def create
-    # name = params.fetch[:name]
-    # skills = params.fetch[:skills]
-
-    candidates = [
-      { name: 'Richi', skills: ['js', 'ruby', 'nodejs'] },
-      { name: 'Mochi', skills: ['js', 'python', 'express'] },
-      { name: 'Luis', skills: ['js', 'java', 'mongodb'] }
-    ]
-
-    # candidates = Rails.cache.instance_variable_get(:@data)
-    
-    puts "Candidates => #{candidates}"
-
+    candidates = Rails.cache.read('candidates').nil? ? [] : Rails.cache.read('candidates')
     id = params[:id]
     name = params[:name]
     skills = params[:skills]
-
-    
     candidate = { id: id,  name: name, skills: skills }
+
     candidates << candidate
     Rails.cache.write('candidates', candidates)
   end
 
   def search
     candidates = Rails.cache.read('candidates')
+
     if params[:skills].blank?
       bad_request
     else
       skills_required = params[:skills].split(',')
-      puts skills_required
-
       candidates = filter(candidates, skills_required)
-      puts candidates
 
       # todo: fix the resulted skills
-      candidate = candidates.first
-      if (candidate[:skills].length > 0)
+      if (candidates.empty?)
+        record_not_found
+      else
+        candidate = candidates.first
         skills = candidate[:skills]
-        
+
         render json: {
           id: candidate[:id],
           name: candidate[:name],
           skills: skills
         }
-      else
-        record_not_found
       end
     end
   end
@@ -60,14 +45,11 @@ class CandidatesController < ApplicationController
       c[:skills] = c[:skills].filter { |s| skills.include?(s) }
       c
     end
-    
+    clean_candidates = candidates.select { |c| !c[:skills].empty?}
+    return clean_candidates.empty? ?
+    [] :
     # sort candidates desc
-    candidates = candidates.sort { |a,b| b[:skills].length <=> a[:skills].length }
+    candidates.sort { |a,b| b[:skills].length <=> a[:skills].length }
   end
 
-  protected
-
-  def candidate_params
-    params.require(:candidate).permit(:name)
-  end
 end
