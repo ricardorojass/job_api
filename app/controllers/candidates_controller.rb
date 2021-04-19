@@ -10,25 +10,13 @@ class CandidatesController < ApplicationController
 
   def search
     if params[:skills].blank?
-      render json: { error: "Upps! something went wrong",status: 400 }
+      bad_request
     else
-      skillsAmount = split_skills_params.length
-      skillIds = Skill.where(name: split_skills_params).pluck(:id)
+      skills_required = params[:skills].split(',')
 
-      candidates =
-        Candidate.distinct.includes(:skills).where(skills: {id: skillIds}).to_a
-
-      # filter by skills included in the search
-      candidates = candidates.map do |c|
-        c.skills = c.skills.filter { |s| skillIds.include?(s.id)}
-        c
-      end
-
-      # sort candidates desc
-      candidates = candidates.sort { |a,b| b.skills.length <=> a.skills.length }
-
+      candidates = Candidate.search(skills_required)        
       if candidates.empty?
-        render json: { error: "upps!", status: 404 }
+        record_not_found
       else
         candidate = candidates.first
         skills = candidate.skills.map { |s| s.name }
@@ -39,7 +27,6 @@ class CandidatesController < ApplicationController
           skills: skills
         }, status: 200 }
       end
-
     end
   end
 
@@ -55,13 +42,5 @@ class CandidatesController < ApplicationController
 
   def candidate_params
     params.require(:candidate).permit(:name)
-  end
-
-  def skill_params
-    params[:skills]
-  end
-
-  def split_skills_params
-    skill_params.split(',')
   end
 end
