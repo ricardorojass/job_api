@@ -2,36 +2,34 @@ class CandidatesController < ApplicationController
   require 'ostruct'
 
   def create
+    # Get cache or create an empty array
     candidates = Rails.cache.read('candidates').nil? ? [] : Rails.cache.read('candidates')
-    id = params[:id]
-    name = params[:name]
-    skills = params[:skills]
-    candidate = { id: id,  name: name, skills: skills }
+
+    # Create object to save
+    candidate = { id: params[:id],  name: params[:name], skills: params[:skills] }
 
     candidates << candidate
     Rails.cache.write('candidates', candidates)
   end
 
   def search
+    # Get cache
     candidates = Rails.cache.read('candidates')
-
     if params[:skills].blank?
       bad_request
     else
       skills_required = params[:skills].split(',')
       candidates = filter(candidates, skills_required)
 
-      # todo: fix the resulted skills
       if (candidates.empty?)
         record_not_found
       else
         candidate = candidates.first
-        skills = candidate[:skills]
 
         render json: {
           id: candidate[:id],
           name: candidate[:name],
-          skills: skills
+          skills: candidate[:skills]
         }
       end
     end
@@ -40,16 +38,18 @@ class CandidatesController < ApplicationController
   private
 
   def filter(candidates, skills)
-    # filter by skills included in the search
-    candidates = candidates.map do |c|
-      c[:skills] = c[:skills].filter { |s| skills.include?(s) }
-      c
-    end
-    clean_candidates = candidates.select { |c| !c[:skills].empty?}
-    return clean_candidates.empty? ?
-    [] :
+    # filter candidates by skills included in the search
+    filter_candidates = candidates.select { |c| (c[:skills] - skills) != c[:skills] }
+
     # sort candidates desc
-    candidates.sort { |a,b| b[:skills].length <=> a[:skills].length }
+    sort_candidates = filter_candidates.sort do |a,b|
+      skills_a = a[:skills].select { |s| skills.include?(s) }
+      skills_b = b[:skills].select { |s| skills.include?(s) }
+
+      skills_b.length <=> skills_a.length
+    end
+
+    return sort_candidates
   end
 
 end

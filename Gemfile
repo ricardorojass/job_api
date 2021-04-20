@@ -38,6 +38,7 @@ group :development do
   ## custom
   gem 'pry-rails'
   gem 'table_print'
+  gem "awesome_print", require:"ap"
 end
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
